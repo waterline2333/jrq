@@ -1,0 +1,22 @@
+{
+  "name": "今日签 🌸",
+  "short_name": "今日签",
+  "description": "专属每日抽签小游戏",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FFF9F5",
+  "theme_color": "#FFAB91",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

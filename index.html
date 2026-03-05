@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="今日签">
+<meta name="theme-color" content="#FFAB91">
+<link rel="manifest" href="manifest.json">
+<title>✿ 今日签 ✿</title>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<style>
+:root {
+  --peach: #FFAB91; --blush: #FFD6DC; --cream: #FFF9F5;
+  --gold: #C8885A; --soft-red: #D9614A; --ink: #3D2B1F;
+  --light-ink: #7A6050; --paper: #FFFAF4; --shadow: rgba(160,100,70,0.12);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  min-height:100vh; background:var(--cream);
+  background-image: radial-gradient(circle at 15% 20%,rgba(255,183,163,0.18) 0%,transparent 40%),
+    radial-gradient(circle at 85% 75%,rgba(255,214,220,0.18) 0%,transparent 40%);
+  font-family:'ZCOOL XiaoWei',serif; color:var(--ink); overflow-x:hidden;
+}
+.petals { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+.petal { position:absolute; opacity:0; animation:petal-fall linear infinite; user-select:none; }
+@keyframes petal-fall {
+  0%{ transform:translateY(-30px) rotate(0deg); opacity:0; } 5%{ opacity:0.16; }
+  90%{ opacity:0.12; } 100%{ transform:translateY(105vh) rotate(400deg); opacity:0; }
+}
+.container { position:relative; z-index:1; max-width:460px; margin:0 auto; padding:36px 20px 80px; display:flex; flex-direction:column; align-items:center; }
+.header { text-align:center; margin-bottom:28px; }
+.header-flowers { font-size:1.1rem; letter-spacing:10px; color:var(--peach); margin-bottom:2px; }
+.header h1 { font-family:'Ma Shan Zheng',cursive; font-size:2.8rem; letter-spacing:8px; color:var(--ink); line-height:1.1; }
+.header-sub { font-size:0.78rem; color:var(--light-ink); letter-spacing:4px; margin-top:8px; }
+.date-tag { display:inline-block; margin-top:10px; padding:4px 18px; background:var(--blush); color:var(--soft-red); border-radius:20px; font-size:0.78rem; letter-spacing:2px; }
+.chances-row { display:flex; align-items:center; gap:10px; margin-bottom:26px; }
+.c-dot { width:10px; height:10px; border-radius:50%; background:var(--peach); transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1); box-shadow:0 0 0 3px rgba(255,171,145,0.2); }
+.c-dot.used { background:#ddd0c8; box-shadow:none; transform:scale(0.7); }
+.c-label { font-size:0.75rem; color:var(--light-ink); letter-spacing:2px; }
+/* ── HANI CAT SCENE ── */
+.cat-scene {
+  display:flex; flex-direction:column; align-items:center;
+  margin-bottom:30px; cursor:pointer; user-select:none;
+  position:relative;
+}
+.cat-label {
+  font-size:0.72rem; color:var(--light-ink); letter-spacing:3px;
+  margin-bottom:8px;
+}
+.cat-stage {
+  position:relative; width:200px; height:160px;
+  display:flex; align-items:flex-end; justify-content:center;
+}
+
+/* pixel cat using CSS — black & white cow cat */
+.hani {
+  position:relative;
+  image-rendering:pixelated;
+  transition:transform 0.15s;
+}
+.cat-scene:hover .hani { transform:translateY(-3px); }
+
+/* SVG pixel cat */
+.hani svg { display:block; }
+
+/* tube next to cat */
+.cat-tube {
+  position:absolute; right:18px; bottom:8px;
+  width:36px; height:70px;
+  background:linear-gradient(160deg,#e8d090,#f5e8b8 40%,#d4a860 70%,#c09050);
+  border-radius:18px 18px 8px 8px;
+  box-shadow:2px 4px 10px var(--shadow),inset -2px 0 5px rgba(0,0,0,0.08);
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  padding-top:6px; overflow:hidden;
+}
+.cat-tube::before {
+  content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:55%; height:9px; background:rgba(0,0,0,0.13); border-radius:0 0 50% 50%;
+}
+.cat-tube::after {
+  content:''; position:absolute; top:50%; left:0; right:0;
+  height:2px; background:rgba(0,0,0,0.08);
+}
+.mini-sticks { display:flex; gap:2px; margin-top:10px; position:relative; z-index:1; }
+.mini-stick { width:3px; height:26px; background:linear-gradient(180deg,#f8f0d8,#d4a060,#b88040); border-radius:2px 2px 1px 1px; transform:rotate(calc(var(--r,0)*1deg)); transform-origin:bottom center; }
+
+.cat-hint { margin-top:10px; font-size:0.78rem; color:var(--light-ink); letter-spacing:3px; transition:opacity 0.3s; }
+
+/* cat animations */
+.hani.idle        { animation:cat-idle 3s ease-in-out infinite; }
+.hani.shaking     { animation:cat-shake 0.8s ease forwards; }
+.hani.yawn        { animation:cat-yawn 1.2s ease forwards; }
+.hani.tail-wag    { animation:cat-tail 1.5s ease forwards; }
+.hani.lick        { animation:cat-lick 1s ease forwards; }
+.hani.rolling     { animation:cat-roll 1.8s ease forwards; }
+.hani.kick        { animation:cat-kick 0.9s ease forwards; }
+.hani.sleeping    { animation:cat-sleep 2s ease forwards; }
+
+@keyframes cat-idle {
+  0%,100%{ transform:translateY(0); }
+  50%{ transform:translateY(-4px); }
+}
+@keyframes cat-shake {
+  0%,100%{ transform:rotate(0) translateY(0); }
+  10%{ transform:rotate(-12deg) translateY(-5px); }
+  25%{ transform:rotate(10deg) translateY(-9px); }
+  40%{ transform:rotate(-8deg) translateY(-6px); }
+  55%{ transform:rotate(7deg) translateY(-3px); }
+  70%{ transform:rotate(-4deg); }
+  85%{ transform:rotate(2deg); }
+}
+@keyframes cat-yawn {
+  0%{ transform:scaleX(1); }
+  30%{ transform:scaleX(1.08) translateY(-2px); }
+  60%{ transform:scaleX(0.96) translateY(1px); }
+  100%{ transform:scaleX(1); }
+}
+@keyframes cat-tail {
+  0%,100%{ transform:rotate(0deg); }
+  25%{ transform:rotate(-6deg) translateX(-3px); }
+  75%{ transform:rotate(6deg) translateX(3px); }
+}
+@keyframes cat-lick {
+  0%,100%{ transform:translateY(0) rotate(0); }
+  30%{ transform:translateY(-4px) rotate(-8deg); }
+  60%{ transform:translateY(-6px) rotate(-12deg); }
+  80%{ transform:translateY(-3px) rotate(-6deg); }
+}
+@keyframes cat-roll {
+  0%{ transform:rotate(0deg) translateY(0); }
+  25%{ transform:rotate(45deg) translateY(10px); }
+  50%{ transform:rotate(90deg) translateY(18px); }
+  75%{ transform:rotate(135deg) translateY(10px) scaleX(-1); }
+  100%{ transform:rotate(0deg) translateY(0) scaleX(-1); }
+}
+@keyframes cat-kick {
+  0%,100%{ transform:translateX(0) rotate(0); }
+  20%{ transform:translateX(-8px) rotate(-5deg); }
+  35%{ transform:translateX(20px) rotate(8deg) scaleX(-1); }
+  50%{ transform:translateX(30px) rotate(12deg) scaleX(-1); }
+  65%{ transform:translateX(18px) rotate(6deg); }
+  80%{ transform:translateX(5px) rotate(2deg); }
+}
+@keyframes cat-sleep {
+  0%,100%{ transform:translateY(0) rotate(0); }
+  50%{ transform:translateY(6px) rotate(3deg); }
+}
+
+/* speech bubble */
+.cat-bubble {
+  position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+  background:white; border:2px solid #e8d0c0;
+  border-radius:10px; padding:5px 10px;
+  font-size:0.72rem; color:var(--ink); letter-spacing:1px;
+  white-space:nowrap;
+  animation:bubble-in 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  box-shadow:0 2px 8px var(--shadow);
+  pointer-events:none; z-index:10;
+}
+.cat-bubble::after {
+  content:''; position:absolute; bottom:-8px; left:50%; transform:translateX(-50%);
+  border:4px solid transparent; border-top-color:#e8d0c0;
+}
+@keyframes bubble-in {
+  0%{ opacity:0; transform:translateX(-50%) scale(0.7) translateY(5px); }
+  100%{ opacity:1; transform:translateX(-50%) scale(1) translateY(0); }
+}
+
+/* disabled */
+.cat-scene.disabled { cursor:not-allowed; opacity:0.6; }
+.fortune-card {
+  width:100%; background:var(--paper); border-radius:22px; padding:28px 24px 24px;
+  box-shadow:0 8px 36px var(--shadow),0 1px 6px rgba(0,0,0,0.04);
+  position:relative; overflow:hidden; margin-bottom:14px;
+  animation:pop-in 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+@keyframes pop-in { 0%{ opacity:0; transform:scale(0.75) translateY(30px); } 100%{ opacity:1; transform:scale(1) translateY(0); } }
+.fortune-card::before { content:''; position:absolute; top:0; left:0; right:0; height:5px; border-radius:22px 22px 0 0; }
+.lv-大吉::before { background:linear-gradient(90deg,#FFB39A,#FF7A5A); }
+.lv-吉::before   { background:linear-gradient(90deg,#FFCC88,#FFA040); }
+.lv-小吉::before { background:linear-gradient(90deg,#A8DFC0,#70B890); }
+.lv-末吉::before { background:linear-gradient(90deg,#A8C8E8,#6898C0); }
+.lv-凶::before   { background:linear-gradient(90deg,#D0B8D8,#A888B8); }
+.lv-大凶::before { background:linear-gradient(90deg,#C0B0A8,#988870); }
+.fortune-card::after { content:'签'; position:absolute; bottom:-10px; right:10px; font-family:'Ma Shan Zheng',cursive; font-size:7rem; opacity:0.04; color:var(--gold); pointer-events:none; line-height:1; }
+.card-no { font-size:0.7rem; color:#b8a090; letter-spacing:3px; margin-bottom:12px; }
+.luck-row { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+.luck-badge { font-family:'Ma Shan Zheng',cursive; font-size:2rem; letter-spacing:4px; padding:6px 22px; border-radius:30px; }
+.lv-大吉 .luck-badge { background:#FFE8E2; color:#D9614A; }
+.lv-吉   .luck-badge { background:#FFF0DC; color:#C07830; }
+.lv-小吉 .luck-badge { background:#E4F5EC; color:#428860; }
+.lv-末吉 .luck-badge { background:#E0EDF8; color:#406890; }
+.lv-凶   .luck-badge { background:#EEE4F2; color:#786090; }
+.lv-大凶 .luck-badge { background:#EAE4DE; color:#786858; }
+.luck-emoji { font-size:1.6rem; }
+hr.dashed { border:none; border-top:1px dashed rgba(200,160,120,0.35); margin:14px 0; }
+.s-label { font-size:0.68rem; color:var(--peach); letter-spacing:3px; margin-bottom:7px; display:flex; align-items:center; gap:6px; }
+.s-label::before,.s-label::after { content:'·'; font-size:1rem; }
+.fortune-cn { font-family:'Ma Shan Zheng',cursive; font-size:1.05rem; line-height:2.3; color:var(--ink); letter-spacing:3px; text-align:center; }
+.interp { font-size:0.87rem; line-height:1.95; color:var(--light-ink); letter-spacing:0.5px; }
+.advice-box { background:linear-gradient(135deg,rgba(255,183,163,0.13),rgba(255,214,220,0.13)); border:1px solid rgba(255,171,145,0.22); border-radius:14px; padding:14px 16px; }
+.advice-text { font-size:0.87rem; line-height:1.95; color:var(--ink); letter-spacing:0.5px; }
+
+/* ── BIG LUCK OVERLAY ── */
+.luck-overlay {
+  position:fixed; inset:0; z-index:200;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(255,248,242,0.97); backdrop-filter:blur(8px);
+  animation:overlay-in 0.4s ease forwards; padding:30px; text-align:center;
+}
+@keyframes overlay-in { 0%{ opacity:0; } 100%{ opacity:1; } }
+.overlay-burst { font-size:5rem; animation:burst-in 0.6s cubic-bezier(0.34,1.8,0.64,1) forwards; margin-bottom:18px; }
+@keyframes burst-in { 0%{ transform:scale(0) rotate(-20deg); opacity:0; } 100%{ transform:scale(1) rotate(0); opacity:1; } }
+.overlay-congrats { font-family:'Ma Shan Zheng',cursive; font-size:2.4rem; color:var(--soft-red); letter-spacing:6px; animation:fade-up 0.5s 0.3s both; margin-bottom:10px; }
+.overlay-sub { font-size:0.88rem; color:var(--light-ink); letter-spacing:2px; line-height:2; animation:fade-up 0.5s 0.5s both; margin-bottom:36px; }
+@keyframes fade-up { 0%{ opacity:0; transform:translateY(16px); } 100%{ opacity:1; transform:translateY(0); } }
+.gift-btn { animation:gift-pop 0.6s 0.9s cubic-bezier(0.34,1.56,0.64,1) both; cursor:pointer; border:none; background:none; display:flex; flex-direction:column; align-items:center; gap:8px; }
+@keyframes gift-pop { 0%{ opacity:0; transform:scale(0.4); } 100%{ opacity:1; transform:scale(1); } }
+.gift-icon { font-size:5.5rem; filter:drop-shadow(0 6px 18px rgba(217,97,74,0.3)); animation:wiggle 1.4s 1.8s ease infinite; }
+@keyframes wiggle { 0%,100%{ transform:rotate(0) scale(1); } 20%{ transform:rotate(-10deg) scale(1.06); } 40%{ transform:rotate(10deg) scale(1.06); } 60%{ transform:rotate(-5deg); } 80%{ transform:rotate(5deg); } }
+.gift-btn:hover .gift-icon { transform:scale(1.18)!important; animation:none; }
+.gift-hint { font-size:0.8rem; color:var(--peach); letter-spacing:3px; animation:blink 1.5s ease infinite; }
+@keyframes blink { 0%,100%{ opacity:1; } 50%{ opacity:0.35; } }
+
+/* confetti */
+.confetti-piece { position:fixed; pointer-events:none; z-index:201; border-radius:2px; animation:confetti-fall 1.6s ease-out forwards; }
+@keyframes confetti-fall { 0%{ transform:translateY(0) rotate(0deg) scale(1); opacity:1; } 100%{ transform:translateY(110vh) rotate(720deg) scale(0.2); opacity:0; } }
+
+/* photo */
+.photo-reveal-wrap { width:100%; border-radius:20px; overflow:hidden; box-shadow:0 6px 28px var(--shadow); animation:pop-in 0.55s cubic-bezier(0.34,1.56,0.64,1) both; margin-bottom:14px; position:relative; }
+.photo-tag { position:absolute; top:12px; left:12px; z-index:2; background:rgba(255,255,255,0.82); backdrop-filter:blur(6px); padding:4px 13px; border-radius:20px; font-size:0.72rem; color:var(--soft-red); letter-spacing:2px; }
+.photo-placeholder { width:100%; aspect-ratio:4/3; background:linear-gradient(135deg,#FFE8E4 0%,#FFD4DC 50%,#FFE4F0 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; }
+.ph-big { font-size:3rem; }
+.ph-txt { font-size:0.82rem; color:var(--soft-red); letter-spacing:2px; }
+.photo-real { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; }
+
+/* history */
+.history-wrap { width:100%; margin-top:10px; }
+.hist-title { text-align:center; font-size:0.75rem; color:var(--light-ink); letter-spacing:3px; margin-bottom:10px; }
+.hist-list { display:flex; flex-direction:column; gap:7px; }
+.hist-item { background:var(--paper); border-radius:13px; padding:10px 16px; display:flex; align-items:center; gap:12px; box-shadow:0 2px 10px var(--shadow); cursor:pointer; transition:transform 0.15s; }
+.hist-item:hover { transform:translateX(4px); }
+.hist-luck { font-family:'Ma Shan Zheng',cursive; font-size:1.1rem; min-width:30px; }
+.hist-preview { font-size:0.78rem; color:var(--light-ink); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:1px; }
+.hist-time { font-size:0.68rem; color:#c0a898; white-space:nowrap; }
+.toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--ink); color:#fff; padding:10px 24px; border-radius:30px; font-size:0.82rem; letter-spacing:2px; transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),opacity 0.35s; opacity:0; z-index:999; pointer-events:none; }
+.toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+.reset-btn { margin-top:20px; padding:8px 22px; background:transparent; border:1px dashed var(--peach); border-radius:20px; color:var(--light-ink); font-family:'ZCOOL XiaoWei',serif; font-size:0.78rem; letter-spacing:2px; cursor:pointer; transition:all 0.2s; }
+.reset-btn:hover { background:var(--blush); color:var(--soft-red); }
+</style>
+</head>
+<body>
+<div class="petals" id="petals"></div>
+<div class="container">
+  <div class="header">
+    <div class="header-flowers">✿ ✿ ✿</div>
+    <h1>今 日 签</h1>
+    <div class="header-sub">专属于你们的每日运势</div>
+    <div class="date-tag" id="dateTag"></div>
+  </div>
+  <div class="chances-row">
+    <div class="c-dot" id="dot0"></div>
+    <div class="c-dot" id="dot1"></div>
+    <div class="c-dot" id="dot2"></div>
+    <span class="c-label" id="chancesLabel">今日还剩 3 次</span>
+  </div>
+  <div class="cat-scene" id="catScene" onclick="drawFortune()">
+    <div class="cat-label">哈 尼 在 此</div>
+    <div class="cat-stage">
+      <div class="hani idle" id="hani">
+        <!-- pixel cow cat SVG -->
+        <svg width="96" height="96" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+          <!-- body -->
+          <rect x="5" y="10" width="14" height="10" fill="#f5f5f5"/>
+          <!-- black patches on body -->
+          <rect x="5" y="10" width="5" height="5" fill="#222"/>
+          <rect x="15" y="14" width="4" height="6" fill="#222"/>
+          <rect x="9" y="17" width="3" height="3" fill="#222"/>
+          <!-- head -->
+          <rect x="7" y="4" width="10" height="8" fill="#f5f5f5"/>
+          <!-- head black patch -->
+          <rect x="7" y="4" width="4" height="4" fill="#222"/>
+          <rect x="14" y="5" width="3" height="3" fill="#222"/>
+          <!-- ears -->
+          <rect x="7" y="2" width="3" height="3" fill="#f5f5f5"/>
+          <rect x="14" y="2" width="3" height="3" fill="#f5f5f5"/>
+          <rect x="8" y="2" width="1" height="2" fill="#ffb7c5"/>
+          <rect x="15" y="2" width="1" height="2" fill="#ffb7c5"/>
+          <!-- eyes -->
+          <rect x="9" y="7" width="2" height="2" fill="#222"/>
+          <rect x="13" y="7" width="2" height="2" fill="#222"/>
+          <!-- eye shine -->
+          <rect x="10" y="7" width="1" height="1" fill="white"/>
+          <rect x="14" y="7" width="1" height="1" fill="white"/>
+          <!-- nose -->
+          <rect x="11" y="9" width="2" height="1" fill="#ffb7c5"/>
+          <!-- mouth -->
+          <rect x="10" y="10" width="1" height="1" fill="#ccc"/>
+          <rect x="13" y="10" width="1" height="1" fill="#ccc"/>
+          <!-- legs -->
+          <rect x="6" y="20" width="3" height="3" fill="#f5f5f5"/>
+          <rect x="10" y="20" width="3" height="3" fill="#f5f5f5"/>
+          <rect x="14" y="20" width="3" height="3" fill="#222"/>
+          <!-- tail -->
+          <rect x="19" y="13" width="2" height="5" fill="#f5f5f5" id="catTail"/>
+          <rect x="20" y="12" width="2" height="2" fill="#222"/>
+          <rect x="21" y="11" width="2" height="2" fill="#f5f5f5"/>
+        </svg>
+      </div>
+      <div class="cat-tube">
+        <div class="mini-sticks">
+          <div class="mini-stick" style="--r:-6"></div>
+          <div class="mini-stick" style="--r:4"></div>
+          <div class="mini-stick" style="--r:-3"></div>
+          <div class="mini-stick" style="--r:7"></div>
+        </div>
+      </div>
+    </div>
+    <div class="cat-hint" id="catHint">点 哈 尼 求 签 🐾</div>
+  </div>
+  <div id="resultsArea" style="width:100%"></div>
+  <div class="history-wrap" id="histWrap" style="display:none">
+    <div class="hist-title">— 今日签文记录 —</div>
+    <div class="hist-list" id="histList"></div>
+  </div>
+  <button class="reset-btn" onclick="resetDay()">🌙 次日重置（测试用）</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const FORTUNES = [
+  // 大吉 ×9
+  {level:'大吉',emoji:'🌸',no:'第一签',cn:'春风得意马蹄疾\n一日看尽长安花',interp:'今日诸事顺遂，出门连绿灯都在等你。财运、桃花、好心情三合一，建议立刻买彩票、表白、申请加薪——今天没人拒绝得了你的。',advice:'✦ 宜：大胆出发，逢凶化吉。忌：在家躺平——这么好的运气窝着浪费，天理难容。'},
+  {level:'大吉',emoji:'☀️',no:'第三签',cn:'云开雾散见青天\n万里长空任翱翔',interp:'困扰你许久的问题今日迎来转机。当然，转机不会自己敲门，你得起码把门打开——即：从被窝里爬出来。',advice:'✦ 宜：主动出击，把握机遇。忌：原地等奇迹——奇迹它也有腿，等累了就走的。'},
+  {level:'大吉',emoji:'🌺',no:'第五签',cn:'金风玉露一相逢\n便胜却人间无数',interp:'今日缘分极旺，与人相遇皆有意义。某个重要的人可能就藏在你今天某次毫不起眼的抬头里——所以，偶尔放下手机？',advice:'✦ 宜：主动社交，对陌生人微笑。忌：把AirPods插到最大声当隐身斗篷。'},
+  {level:'大吉',emoji:'🏆',no:'第七签',cn:'龙腾四海志凌云\n天地为我开锦途',interp:'今天你就是主角光环全开状态。别问为什么，就是今天。你做什么都顺，说什么都对，走路都带风——记得感谢一下抽签。',advice:'✦ 宜：冲！一切皆可冲！忌：把这股运气花在刷视频上——你值得更好的消耗方式。'},
+  {level:'大吉',emoji:'🎊',no:'第九签',cn:'福星高照百事顺\n喜气盈门春意浓',interp:'今天的你像个移动的好运发射器，靠近你的人都会沾光。朋友应该感谢你出门，外卖员应该感谢你点单，公交车应该感谢你上车。',advice:'✦ 宜：多出门多露面，把好运分一分。忌：独享——好运是流动的，存起来会过期。'},
+  {level:'大吉',emoji:'✨',no:'第十一签',cn:'千帆竞发浪潮涌\n我自乘风破万里',interp:'你心里那件"等我准备好再说"的事——你已经准备好了，只是自己还不知道而已。去吧。',advice:'✦ 宜：迈出第一步，哪怕步子小。忌：再开一个新的计划文档——你已经有17个了。'},
+  {level:'大吉',emoji:'🌟',no:'第十三签',cn:'高山流水遇知音\n此生得遇是缘深',interp:'今日与身边人的联结格外有温度。哪怕只是一起沉默地刷手机，也是一种高质量陪伴——听起来很荒唐，但你们懂的。',advice:'✦ 宜：珍惜眼前人，说出想说的话。忌：把"我很喜欢你"继续存在草稿箱发酵。'},
+  {level:'大吉',emoji:'🎯',no:'第十五签',cn:'运筹帷幄决胜千\n时来天地皆同力',interp:'今天你做的每个决定都会被宇宙偷偷加buff。连随机选的那个选项也是对的——但不建议用来赌博，这签明天就过期了。',advice:'✦ 宜：果断决策，相信直觉。忌：因为运气好就飘——大吉之后可能就是末吉。'},
+  {level:'大吉',emoji:'🌈',no:'第十七签',cn:'彩云追月映华光\n万物生辉皆向阳',interp:'今日你的笑容有魔力，你的存在让周围的空气质量都提升了。这不是夸张，是真的——至少在你们两个人的小世界里是这样的。',advice:'✦ 宜：多笑多说多分享今天的快乐。忌：因为运气好而膨胀，说了什么不该说的话。'},
+  // 吉 ×15
+  {level:'吉',emoji:'🌼',no:'第十九签',cn:'细雨润物声无声\n好事将至莫心急',interp:'运气在路上，还没到，但快了。就像外卖显示"即将送达"已经二十分钟——但它真的在来，不是被取消了，耐住。',advice:'✦ 宜：稳住心态，做好准备。忌：每隔五分钟刷新进度——宇宙不接受催单。'},
+  {level:'吉',emoji:'🍀',no:'第二十一签',cn:'积善之家有余庆\n厚德载物福自来',interp:'今天多做一件好事会有加倍回报。哪怕只是帮人扶了门、夸了同事发型——好人好事宇宙都记账，利息比余额宝高。',advice:'✦ 宜：善待他人，广结善缘。忌：专门去找人杠——今天你赢得了，但没必要。'},
+  {level:'吉',emoji:'🎋',no:'第二十三签',cn:'乘风破浪会有时\n直挂云帆济沧海',interp:'目标虽远，今日是出发的好时机。你那件"等我准备好"的事，其实你已经够格了——你只是还不知道而已，去试试吧。',advice:'✦ 宜：迈出第一步。忌：再开一个新计划文档——那第18个了。'},
+  {level:'吉',emoji:'🌙',no:'第二十五签',cn:'月朗星稀夜无风\n静处自有好梦来',interp:'今天适合好好休息，充充电。让自己当一下接收端——看喜欢的内容，吃喜欢的东西，做喜欢的人旁边的咸鱼。',advice:'✦ 宜：好好休息，做喜欢的事。忌：用"好好休息"当借口逃避所有责任——那叫摆烂。'},
+  {level:'吉',emoji:'🦋',no:'第二十七签',cn:'破茧成蝶待时机\n化羽飞翔在今朝',interp:'你一直在积蓄的那股劲，今天可以慢慢释放了。就像手机充到80%，够用了，先拔出来吧。',advice:'✦ 宜：启动已拖延的计划。忌：等充到100%再动——你永远在等那最后20%。'},
+  {level:'吉',emoji:'🍵',no:'第二十九签',cn:'清茶一盏暖人心\n平淡之中有真味',interp:'今天不会有大起大落，但会有小确幸。可能是一杯恰好合口的奶茶，可能是朋友发来的一个蠢表情包——接住它。',advice:'✦ 宜：留心身边的小美好。忌：因为没有"大事发生"就觉得这天没意义。'},
+  {level:'吉',emoji:'🎵',no:'第三十一签',cn:'丝竹悦耳心自宽\n闲情逸致赛神仙',interp:'今日适合做一些滋养灵魂的事。换个播放列表，点一杯没点过的饮料，走一条没走过的路——这些小偏离，会让今天的记忆有点不一样。',advice:'✦ 宜：尝试小小的不同。忌：偏离到忘了今天本来要干的正事。'},
+  {level:'吉',emoji:'🌊',no:'第三十三签',cn:'潮起潮落自有时\n顺势而为方为智',interp:'今天不要逆着来，跟着感觉走就对了。你那种"我觉得应该……"的直觉今天比较靠谱——当然，"我觉得应该再睡一会儿"这条不算。',advice:'✦ 宜：跟随直觉，顺势而行。忌：把"顺势"解读成可以不上班——不行的。'},
+  {level:'吉',emoji:'🏡',no:'第三十五签',cn:'家和万事兴旺来\n温情脉脉是归处',interp:'今日与亲近的人在一起会特别舒服。不需要做什么特别的事，就是在一起就很好——你们之间那种说不清道不明的默契，今天格外清晰。',advice:'✦ 宜：多陪陪重要的人。忌：因为"反正关系好"就懈怠——关系是需要浇水的。'},
+  {level:'吉',emoji:'🌿',no:'第三十七签',cn:'草木逢春竞生长\n万象更新启新章',interp:'新事物值得尝试，今日的你接受度比平时高，不容易踩雷。适合第一次做某件事——哪怕只是第一次点那家店、说出那句话。',advice:'✦ 宜：尝鲜，打破惯性。忌：把所有"第一次"都安排在今天——你只有24小时。'},
+  {level:'吉',emoji:'🎀',no:'第三十九签',cn:'红绳系缘千里牵\n相知相守共此生',interp:'今日与人的连接格外顺畅，说什么都容易被理解，做什么都容易被接受。趁机把想说的说出来，比存在心里强。',advice:'✦ 宜：坦诚表达，增进感情。忌：把"今天说话顺"当成可以说任何话——有些话顺也不该说。'},
+  {level:'吉',emoji:'🍑',no:'第四十一签',cn:'桃李不言下自成蹊\n实力自现无须张扬',interp:'不需要刻意表现，你今天自然散发的那种状态就够好了。不需要贴"此处有花"的牌子，花自己会香——你也是。',advice:'✦ 宜：自然做自己，不刻意。忌：低调到完全透明——被忽视和谦虚是两码事。'},
+  {level:'吉',emoji:'🌷',no:'第四十三签',cn:'春色满园关不住\n一枝红杏出墙来',interp:'你最近压着的某种能量，今天适合让它出来透透气。可以是创意，可以是情绪，可以是一首你一直没发出去的内容——放出来，不会出事的。',advice:'✦ 宜：表达，创作，释放。忌："出来透气"出成了惹事——比喻而已，别当真。'},
+  {level:'吉',emoji:'🎈',no:'第四十五签',cn:'轻舟已过万重山\n回望来路皆是歌',interp:'你以为很难的事，其实已经过去了。现在的你比三个月前的你更能扛，只是没注意到而已——今天可以夸夸自己，你真的挺厉害的。',advice:'✦ 宜：回顾成长，给自己一点正反馈。忌：夸完就飘，忘了还有下一座山要爬。'},
+  // 小吉 ×15
+  {level:'小吉',emoji:'🌿',no:'第四十七签',cn:'山重水复疑无路\n柳暗花明又一村',interp:'目前局面有些绕，但峰回路转就在眼前。生活就是这样，你以为到头了，它说：没有，还有一段。好消息是那一段通常风景不错。',advice:'✦ 宜：换个角度思考。忌：钻牛角尖——角尖里什么都没有，真的查过了。'},
+  {level:'小吉',emoji:'🌻',no:'第四十九签',cn:'平湖秋月映清辉\n静水深流见从容',interp:'今日适合低调行事，不争不抢反而有收获。不急不代表不行，只代表你更有自信——或者只是更困，但效果一样。',advice:'✦ 宜：沉住气，以静制动。忌：跟别人比速度——你们走的根本不是同一条路。'},
+  {level:'小吉',emoji:'🍃',no:'第五十一签',cn:'微风徐来水波兴\n顺水行舟省半力',interp:'今天顺着走省力，逆着来费劲。不是叫你妥协，是叫你选对方向再发力——对的方向事半功倍，错的方向事倍功半，就这么大差别。',advice:'✦ 宜：找准方向再用力。忌：蛮干——力气是有限的，用在刀刃上。'},
+  {level:'小吉',emoji:'🌾',no:'第五十三签',cn:'耕耘不辍终有获\n汗水浇灌花自开',interp:'没有捷径，但你最近的努力真的在积累。看不到不代表没有——就像存款，不看的时候它也在那里，只是你没打开余额宝而已。',advice:'✦ 宜：坚持已有的节奏。忌：因为看不到立竿见影就放弃——你差一点点就到了。'},
+  {level:'小吉',emoji:'🪴',no:'第五十五签',cn:'绿意盎然生机勃\n小事积累成大事',interp:'今天适合做那些"很小但一直没做"的事。回一封久未回的消息，整理一下桌面——小事做完，整个人会轻很多。',advice:'✦ 宜：清理积压的小事。忌：因为"都是小事"就全部继续拖着——你桌面上有多少文件了？'},
+  {level:'小吉',emoji:'🌙',no:'第五十七签',cn:'月上柳梢时渐晚\n良宵有约莫蹉跎',interp:'今天有件好事在傍晚前后发生的概率很高。不是特别大的好事，但就是那种让你嘴角上扬的小惊喜——留心点，别刷手机刷过去了。',advice:'✦ 宜：保持感知，留意细节。忌：因为期待"好事"反而焦虑——它不喜欢被盯着看。'},
+  {level:'小吉',emoji:'🍰',no:'第五十九签',cn:'甜中带涩方知味\n苦后逢甘倍珍惜',interp:'今天会有一点小麻烦，但麻烦后面紧跟着一个小惊喜。就像蛋糕里有颗苦杏仁，但整体还是甜的——吃完回味，还挺有层次。',advice:'✦ 宜：以平常心面对小波折。忌：因为那颗苦杏仁就整块蛋糕不要了——太浪费了。'},
+  {level:'小吉',emoji:'🪷',no:'第六十一签',cn:'含苞待放春意近\n积蓄力量待花开',interp:'你现在处于"还没开"但"马上就要开"的阶段。不是没用，是在蓄力。这个阶段最重要的事就是：不要因为急着开花而把花苞掐掉。',advice:'✦ 宜：继续积累，不要自我怀疑。忌：和"已经开了"的别人比——你们的季节不一样。'},
+  {level:'小吉',emoji:'🎐',no:'第六十三签',cn:'随风而去随风来\n得失之间心自宽',interp:'今天放下一件执念，你会意外地轻松。不是叫你什么都不在乎，是在乎的同时也可以松一松手——抓太紧，手掌会疼的。',advice:'✦ 宜：适当放手，接受不完美。忌：放手放成了完全不在乎——从执念到躺平，都不是正确答案。'},
+  {level:'小吉',emoji:'🫧',no:'第六十五签',cn:'泡沫虽美终消散\n实处着力方为真',interp:'今天可能有个看起来很美的机会，但仔细看有点虚。不是叫你放弃，是叫你把预期降低一档——这样无论如何都不亏。',advice:'✦ 宜：保持理性，扎实推进。忌：被漂亮的泡泡迷眼——戳一下就知道了。'},
+  {level:'小吉',emoji:'🌅',no:'第六十七签',cn:'旭日东升开新局\n平稳前行见坦途',interp:'今天最大的关键词是"稳"。不是特别惊艳，但也不会出错。稳其实很难得——至少比那种上上下下跌宕起伏要省心多了。',advice:'✦ 宜：保持节奏，稳定输出。忌：嫌"稳"无聊而故意制造波澜——波澜是你自己找的，怨不了别人。'},
+  {level:'小吉',emoji:'🍄',no:'第六十九签',cn:'雨后春笋节节高\n厚积薄发终出头',interp:'你在某件事上的进展比你以为的要快。你总觉得自己还差很远，但旁观者看来你已经走了很长一段——停下来回头望一眼，会有点惊喜。',advice:'✦ 宜：回顾进展，给自己一点信心。忌：因为"发现有进展"就停下来庆祝太久——前面还有路呢。'},
+  {level:'小吉',emoji:'🌊',no:'第七十一签',cn:'细流汇聚成大江\n点滴之功莫轻视',interp:'今天做的每一件小事都比看起来更重要。就像你每天多喝的那杯水，皮肤一个月后会告诉你有没有用。',advice:'✦ 宜：认真对待小事。忌：因为是"小事"就随手应付——细节里住着魔鬼，也住着惊喜。'},
+  {level:'小吉',emoji:'🎋',no:'第七十三签',cn:'竹节空心志坚韧\n逆境之中见真章',interp:'今天可能有点小压力，但这种压力是锻炼性质的，不是折磨性质的——就像健身的那种酸，说明你在变强，不是在坏掉。',advice:'✦ 宜：迎接小挑战，把它当练习。忌：因为"反正是小事"就不认真对待——小挑战也需要认真应对。'},
+  {level:'小吉',emoji:'🌺',no:'第七十五签',cn:'暗香浮动月黄昏\n低调之美自有人知',interp:'今天你做的某件事，有人注意到了，只是没说出来。世界上存在一种默默欣赏你的眼神——你感受不到，但它在那里。',advice:'✦ 宜：继续做自己，不必邀功。忌：因为没被表扬就觉得没人在乎——有时候欣赏是无声的。'},
+  // 末吉 ×12
+  {level:'末吉',emoji:'☁️',no:'第七十七签',cn:'浮云遮日终有时\n守得云开见月明',interp:'运势平平，但"平平"不代表"没有"，只是幅度比较温柔。今天适合做不需要太多运气的事：喝水、睡觉、发呆——都挺好的。',advice:'✦ 宜：休养生息，养精蓄锐。忌：非要今天做人生大决定——签都告诉你了，缓缓。'},
+  {level:'末吉',emoji:'🍂',no:'第七十九签',cn:'小舟横渡风平处\n且待东风再扬帆',interp:'时机未到，今日宜守不宜攻。不是你不行，是风向还没转。你已经准备好了，但老天还没准备好配合，再等等。',advice:'✦ 宜：打好基础，等待时机。忌：强行起飞——没风的时候硬冲，那叫坠机。'},
+  {level:'末吉',emoji:'🌫️',no:'第八十一签',cn:'雾里看花终隔层\n待到水落方见石',interp:'今天有些事看不清楚，先别急着做判断。你现在掌握的信息不够全，等雾散了再说——比你现在猜来猜去准多了。',advice:'✦ 宜：观望，收集信息。忌：在雾里硬做决定——结果可能和你想的完全相反。'},
+  {level:'末吉',emoji:'🍵',no:'第八十三签',cn:'清淡之日亦有味\n平凡之中见坚守',interp:'今天就是普通的一天，不好不坏。这种签文其实很难写，因为没什么特别的说——就像你问"今天天气怎么样"，答案是"还行"。',advice:'✦ 宜：完成日常，维持节奏。忌：因为"没意思"就把今天草草了事——普通的日子也值得认真过。'},
+  {level:'末吉',emoji:'🌑',no:'第八十五签',cn:'蛰伏不动养元气\n待时而动方有成',interp:'今天的你适合当观众，不适合当主角。坐在旁边看看别人怎么做，学着点——这不是退缩，这是很高级的学习姿势。',advice:'✦ 宜：观察，学习，积累。忌：因为"当观众"就完全脱离——观众也可以随时变主角的。'},
+  {level:'末吉',emoji:'🌧️',no:'第八十七签',cn:'阴雨连绵终会晴\n忍耐之后见阳光',interp:'有点难熬，但快了。不是叫你硬撑，是叫你知道有个尽头——扛过这段，后面会松一口气的。预计松气时间：快了，但不知道具体几天。',advice:'✦ 宜：好好照顾自己，等待转机。忌：因为"快了"就放松警惕——没到终点前，裤子还是要系好。'},
+  {level:'末吉',emoji:'🌵',no:'第八十九签',cn:'旱地顽强自生根\n困境之中见精神',interp:'今天可能有些不顺，但你比你以为的更能扛。仙人掌在沙漠里照样长，你在难搞的日子里照样过——你是人类仙人掌。',advice:'✦ 宜：相信自己的韧性。忌：把"能扛"变成理由不寻求帮助——仙人掌也需要偶尔浇一次水。'},
+  {level:'末吉',emoji:'🪨',no:'第九十一签',cn:'磐石虽重终移动\n功夫不负有心人',interp:'你在推的那件很重的事，今天推不动也是正常的。但你每推一次，它都在松动一点点，只是你感觉不到——可能再推三次就动了。',advice:'✦ 宜：坚持，即使看起来没有进展。忌：觉得"没用"就直接弃了——可能差三次呢。'},
+  {level:'末吉',emoji:'🌙',no:'第九十三签',cn:'夜深人静思绪远\n明日再看自分明',interp:'今天想太多解决不了问题，有些事睡一觉会更清晰。你的大脑需要休息才能正常工作——现在疲惫状态下做出的决定，明天的你可能会翻白眼。',advice:'✦ 宜：早点休息，让大脑整理一下。忌：强行在疲惫状态下解决复杂问题——你在给自己挖坑。'},
+  {level:'末吉',emoji:'🌊',no:'第九十五签',cn:'潮水退去沙留痕\n得失之间自有值',interp:'今天可能失去某个东西——可能是机会，可能是期待，可能只是一个停车位。但失去的同时也腾出了空间，空间是好东西。',advice:'✦ 宜：接受失去，看见腾出的空间。忌：死盯着失去的，忘了看空出来的位置能放什么。'},
+  {level:'末吉',emoji:'🍃',no:'第九十七签',cn:'落叶归根自有道\n万事随缘心自安',interp:'"随缘"不是不作为，是在做好能做的之后，不执着于结果——该来的会来，不该来的拦不住也追不到。',advice:'✦ 宜：尽力而为，结果随缘。忌：用"随缘"给自己的懒惰开脱——自己心里知道的。'},
+  {level:'末吉',emoji:'🌾',no:'第九十九签',cn:'寒冬腊月春将至\n熬过去了是新生',interp:'还没到春天，但真的快了——这句话是认真说的，不是安慰你。你现在的状态像冬天最后一个月，冷，但过了就暖了。再撑一下。',advice:'✦ 宜：告诉自己"快了"。忌：因为还没到春天就假装夏天来了——该穿棉袄还是穿。'},
+  // 凶 ×9
+  {level:'凶',emoji:'⚡',no:'第一百零一签',cn:'谋事在人成事难\n且收心神待来日',interp:'今日诸事不宜冒进，容易竹篮打水一场空。说人话：今天你出手大概率白忙活。但白忙活也是成长——至少你知道了什么叫"时机不对"。',advice:'✦ 宜：按兵不动，审时度势。忌：强行出击——你输得起，但今天就别练了。'},
+  {level:'凶',emoji:'🌧️',no:'第一百零三签',cn:'急流险滩需小心\n缓步前行保平安',interp:'今日暗礁较多，走路要看路，说话要过脑。别担心，凶签不是诅咒，只是宇宙提醒你：今天戴上耳机，屏蔽一切麻烦。',advice:'✦ 宜：谨慎行事，低调度日。忌：今天跟任何人杠——有理也说不清，费劲不讨好。'},
+  {level:'凶',emoji:'🌪️',no:'第一百零五签',cn:'风波四起需镇定\n处变不惊方是智',interp:'今天可能有点乱，乱到你想问"这是在针对我吗"——不是，只是今天的宇宙比较混乱，大家都在被折腾，你只是其中之一。',advice:'✦ 宜：保持冷静，不被情绪带着走。忌：在乱局里做重大决定——等平静了再说。'},
+  {level:'凶',emoji:'🌩️',no:'第一百零七签',cn:'逆风而行须费力\n暂且停歇待风息',interp:'今天做什么都比平时费劲。不是你变弱了，是风向不对——同样的力气，今天能做的事少一半。接受这个现实，别跟今天死磕。',advice:'✦ 宜：完成最基础的任务，不求超常发挥。忌：拿今天的产出跟昨天比——那是作弄自己。'},
+  {level:'凶',emoji:'🌫️',no:'第一百零九签',cn:'迷途知返尚不晚\n悬崖勒马保全身',interp:'你最近有件事在往不太对的方向走，今天是个发现的好时机。不是叫你放弃，是叫你检查一下——修正比推翻容易。',advice:'✦ 宜：反思，自查，适时调整。忌：明知哪里不对还死撑着——那不叫坚持，叫固执。'},
+  {level:'凶',emoji:'🌑',no:'第一百一十一签',cn:'乌云压顶心烦乱\n静心沉气待天晴',interp:'今天你的情绪可能比较容易波动，有人说什么你可能会多想——这不是你的错，是今天的磁场不稳定，宽容自己一下。',advice:'✦ 宜：允许自己今天状态不好。忌：因为状态不好就迁怒别人——你的坏心情不需要别人来买单。'},
+  {level:'凶',emoji:'🌊',no:'第一百一十三签',cn:'逆水行舟不进则退\n此时宜守非攻之时',interp:'今天用力推，可能反被推回来。守住现有的东西比开拓新领域重要——这不是退步，这是聪明的战略收缩，历史上这样打赢的案例一堆。',advice:'✦ 宜：守住基本盘。忌：因为"守"字让你觉得软弱——守的时候不是在输，是在积蓄。'},
+  {level:'凶',emoji:'🍂',no:'第一百一十五签',cn:'一叶知秋风渐凉\n收起繁花待来春',interp:'今天收到了某种"信号"——可能是感觉、可能是一句话、可能是一个细节。别无视它，但也别放大它，记下来，之后回头看会明白的。',advice:'✦ 宜：留心信号，不过度解读。忌：因为一个信号就把整件事推翻——你可能只是抓到了信号的尾巴。'},
+  {level:'凶',emoji:'🌵',no:'第一百一十七签',cn:'寸步难行非无路\n另辟蹊径自可通',interp:'你一直在走的那条路，今天明显感觉很堵。也许该绕一绕——可能只是换个先后顺序，事情就通了。',advice:'✦ 宜：尝试换个思路或顺序。忌：因为"本来就该这样"而拒绝绕路——条条大路通罗马，但不是每条都同等顺畅。'},
+  // 大凶 ×3
+  {level:'大凶',emoji:'🌑',no:'第一百一十九签',cn:'险途荆棘步难行\n且退一步天地宽',interp:'恭喜抽到传说中的大凶！概率极低，说明你今天运气的"消耗品"都花在抽签上了——实际生活中的厄运已被提前消耗。（这是我现场编的，但听起来很有道理对吧？）',advice:'✦ 宜：在家待着，能不出门就不出门，能不开口就不开口。忌：做任何超出"呼吸"范围的事情。'},
+  {level:'大凶',emoji:'🌪️',no:'第一百二十一签',cn:'风雷大作天地暗\n且寻静处待晴明',interp:'此签乃今日最难签，万事皆阻……不过你还在好好看这段解签，说明也没那么惨嘛。大凶精髓不在"有多倒霉"，在"我预见到了"——今天少做少错，多睡为妙。',advice:'✦ 宜：做最简单的事，维持基础运转。忌：相信"反正都大凶了无所谓"然后乱来——大凶是预警不是豁免。'},
+  {level:'大凶',emoji:'⚫',no:'第一百二十三签',cn:'乌云蔽日路茫茫\n原地守候莫妄动',interp:'今天我建议你把所有"要不要做某件大事"的念头存进备忘录，明天再看——你会发现睡一觉之后，一半的念头你自己就否定了，剩下的才值得做。',advice:'✦ 宜：维持现状，不做任何重大改变。忌：今天突然"想通了"想做什么大事——那不是想通，那是大凶附体。'}
+];
+
+const PHOTOS = [
+  {src:null,caption:'合照一'},{src:null,caption:'合照二'},
+  {src:null,caption:'合照三'},{src:null,caption:'合照四'}
+];
+
+const MAX_DRAWS = 3;
+
+// ── 概率配置 ──
+// 大吉5% 吉22% 小吉27% 末吉25% 凶20% 大凶1%
+const LEVEL_CONFIG = {
+  '大吉': { weight:5,  noRepeat:10 },
+  '吉':   { weight:22, noRepeat:6  },
+  '小吉': { weight:27, noRepeat:5  },
+  '末吉': { weight:25, noRepeat:5  },
+  '凶':   { weight:20, noRepeat:5  },
+  '大凶': { weight:1,  noRepeat:20 },
+};
+const TOTAL_WEIGHT = Object.values(LEVEL_CONFIG).reduce((s,c)=>s+c.weight,0);
+
+// ── 哈尼说话 ──
+const BUBBLES_IDLE   = ['喵～','呼噜噜…','……','哈欠~','蹭蹭','饿了','困困'];
+const BUBBLES_SHAKE  = ['使劲摇！','哗啦哗啦！','出来吧！','签签签！','呐呐呐！'];
+const BUBBLES_RESULT = {
+  '大吉': ['喵！大吉！！','哇哦！','打滚打滚！','耶耶耶！'],
+  '吉':   ['还不错哦~','喵呜','今天加油','嗯嗯'],
+  '小吉': ['马马虎虎','将就吧','喵…','还行吧'],
+  '末吉': ['呼噜…','就这样吧','打个哈欠','嗯？'],
+  '凶':   ['喵？！','哦不','摇头摇头','哎'],
+  '大凶': ['嘭——！','踹飞了！','哼！','不好不好！'],
+};
+
+let state = loadState();
+let drawing = false;
+
+function loadState() {
+  const today = getTodayStr();
+  try {
+    const s = JSON.parse(localStorage.getItem('fstate_v4')||'{}');
+    if (s.date===today) return s;
+  } catch(e){}
+  return {date:today, draws:[], usedByLevel:{}, usedPi:[]};
+}
+function saveState(){ try{localStorage.setItem('fstate_v4',JSON.stringify(state));}catch(e){} }
+function getTodayStr(){ return new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit'}); }
+
+// ── 按概率选等级 ──
+function pickLevel(){
+  let roll = Math.random() * TOTAL_WEIGHT;
+  for(const [level,cfg] of Object.entries(LEVEL_CONFIG)){
+    roll -= cfg.weight;
+    if(roll<=0) return level;
+  }
+  return '小吉';
+}
+
+// ── 按等级选签文，带不重复保护 ──
+function pickFortune(){
+  const level = pickLevel();
+  const cfg = LEVEL_CONFIG[level];
+  const allOfLevel = FORTUNES.map((f,i)=>({f,i})).filter(({f})=>f.level===level);
+  if(!state.usedByLevel[level]) state.usedByLevel[level]=[];
+  const used = state.usedByLevel[level];
+  const avail = allOfLevel.filter(({i})=>!used.includes(i));
+  const pool = avail.length>0 ? avail : allOfLevel;
+  const pick = pool[Math.floor(Math.random()*pool.length)];
+  used.push(pick.i);
+  if(used.length > cfg.noRepeat) used.shift();
+  return pick.f;
+}
+
+// ── 哈尼动画 ──
+let idleTimer = null;
+function hani(){ return document.getElementById('hani'); }
+
+function catAnim(type, bubble){
+  const cat = hani(); if(!cat) return;
+  clearTimeout(idleTimer);
+  cat.className = 'hani ' + type;
+  if(bubble) showCatBubble(bubble);
+  idleTimer = setTimeout(()=>{ if(cat) cat.className='hani idle'; }, 2800);
+}
+
+function showCatBubble(text){
+  const stage = document.querySelector('.cat-stage'); if(!stage) return;
+  document.querySelectorAll('.cat-bubble').forEach(b=>b.remove());
+  const b = document.createElement('div');
+  b.className='cat-bubble'; b.textContent=text;
+  stage.appendChild(b);
+  setTimeout(()=>b.remove(), 2200);
+}
+
+function randomFrom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+// ── INIT ──
+window.onload = ()=>{
+  spawnPetals();
+  document.getElementById('dateTag').textContent = new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  renderChances();
+  renderHistory();
+  if(state.draws.length>0){
+    const last = state.draws[state.draws.length-1];
+    renderCard(last.fortune, last.photo, false, last.fortune.level==='大吉');
+  }
+  if(state.draws.length>=MAX_DRAWS) disableCat();
+  // 哈尼偶尔说话
+  setInterval(()=>{
+    if(state.draws.length<MAX_DRAWS && !document.querySelector('.luck-overlay') && !drawing)
+      showCatBubble(randomFrom(BUBBLES_IDLE));
+  }, 7000);
+};
+
+function renderChances(){
+  const rem=MAX_DRAWS-state.draws.length;
+  for(let i=0;i<MAX_DRAWS;i++) document.getElementById('dot'+i).classList.toggle('used',i>=rem);
+  document.getElementById('chancesLabel').textContent = rem===0?'今日已用完':`今日还剩 ${rem} 次`;
+}
+
+// ── 求签 ──
+function drawFortune(){
+  if(drawing) return;
+  if(state.draws.length>=MAX_DRAWS){ showToast('今日缘已尽，明天再来～ 🌙'); showCatBubble('明天再来！'); return; }
+  drawing = true;
+  catAnim('shaking', randomFrom(BUBBLES_SHAKE));
+
+  setTimeout(()=>{
+    const fortune = pickFortune();
+    // 照片
+    if(!state.usedPi) state.usedPi=[];
+    const avp = PHOTOS.map((_,i)=>i).filter(i=>!state.usedPi.includes(i));
+    const pp  = avp.length>0 ? avp : PHOTOS.map((_,i)=>i);
+    const pi  = pp[Math.floor(Math.random()*pp.length)];
+    const photo = PHOTOS[pi];
+    state.usedPi.push(pi); if(state.usedPi.length>2) state.usedPi.shift();
+
+    state.draws.push({fortune, photo, time:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});
+    saveState();
+    renderChances();
+
+    const lvl = fortune.level;
+    const bubble = randomFrom(BUBBLES_RESULT[lvl]);
+
+    if(lvl==='大吉'){
+      catAnim('rolling', bubble);
+      setTimeout(()=>showBigLuckOverlay(fortune,photo), 500);
+    } else if(lvl==='大凶'){
+      catAnim('kick', bubble);
+      setTimeout(()=>renderCard(fortune,photo,true,false), 500);
+    } else {
+      const anims = ['yawn','tail-wag','lick'];
+      catAnim(randomFrom(anims), bubble);
+      renderCard(fortune,photo,true,false);
+    }
+
+    renderHistory();
+    if(state.draws.length>=MAX_DRAWS) setTimeout(disableCat, 2200);
+    drawing = false;
+  }, 950);
+}
+
+function disableCat(){
+  const scene=document.getElementById('catScene');
+  if(scene) scene.classList.add('disabled');
+  const hint=document.getElementById('catHint');
+  if(hint) hint.textContent='哈尼睡着了～明日再来';
+  catAnim('sleeping','晚安～');
+}
+
+function showBigLuckOverlay(fortune,photo){
+  spawnConfetti();
+  const ov=document.createElement('div');
+  ov.className='luck-overlay'; ov.id='luckOverlay';
+  ov.dataset.fortune=JSON.stringify(fortune);
+  ov.dataset.photo=JSON.stringify(photo);
+  ov.innerHTML=`
+    <div class="overlay-burst">🌸</div>
+    <div class="overlay-congrats">恭 喜 大 吉 ！</div>
+    <div class="overlay-sub">今日运势最高等级<br>哈尼正在打滚庆祝 🐾<br><br>还有一份幸运礼物在等你 ↓</div>
+    <button class="gift-btn" id="giftBtn" onclick="openGift(event)">
+      <div class="gift-icon">🎁</div>
+      <div class="gift-hint">点我打开</div>
+    </button>`;
+  document.body.appendChild(ov);
+}
+
+function openGift(e){
+  e.stopPropagation();
+  const ov=document.getElementById('luckOverlay');
+  const fortune=JSON.parse(ov.dataset.fortune);
+  const photo=JSON.parse(ov.dataset.photo);
+  document.getElementById('giftBtn').innerHTML=`<div style="font-size:4rem;animation:burst-in 0.4s cubic-bezier(0.34,1.8,0.64,1) forwards">🎊</div>`;
+  spawnConfetti();
+  setTimeout(()=>{
+    ov.remove();
+    renderCard(fortune,photo,true,true);
+    window.scrollTo({top:document.getElementById('resultsArea').offsetTop-20,behavior:'smooth'});
+  },600);
+}
+
+function renderCard(fortune,photo,animate,showPhoto){
+  const area=document.getElementById('resultsArea');
+  area.innerHTML='';
+  const card=document.createElement('div');
+  card.className=`fortune-card lv-${fortune.level}`;
+  if(!animate) card.style.animation='none';
+  card.innerHTML=`
+    <div class="card-no">${fortune.no}</div>
+    <div class="luck-row"><span class="luck-badge">${fortune.level}</span><span class="luck-emoji">${fortune.emoji}</span></div>
+    <hr class="dashed">
+    <div class="s-label">签文</div>
+    <div class="fortune-cn">${fortune.cn.replace('\n','<br>')}</div>
+    <hr class="dashed">
+    <div class="s-label">解签</div>
+    <p class="interp">${fortune.interp}</p>
+    <hr class="dashed">
+    <div class="s-label">今日建议</div>
+    <div class="advice-box"><p class="advice-text">${fortune.advice}</p></div>`;
+  area.appendChild(card);
+
+  if(showPhoto){
+    const pc=document.createElement('div');
+    pc.className='photo-reveal-wrap';
+    if(!animate) pc.style.animation='none';
+    pc.innerHTML=`<div class="photo-tag">🎁 幸运礼物</div>`;
+    if(photo&&photo.src){
+      const img=document.createElement('img');
+      img.className='photo-real'; img.src=photo.src; img.alt=photo.caption||'合照';
+      pc.appendChild(img);
+    } else {
+      pc.innerHTML+=`<div class="photo-placeholder"><div class="ph-big">📷</div><div class="ph-txt">${photo?photo.caption:'合照'}</div><div class="ph-txt" style="font-size:0.68rem;opacity:0.6">（合照待放入）</div></div>`;
+    }
+    area.appendChild(pc);
+  }
+}
+
+function renderHistory(){
+  const wrap=document.getElementById('histWrap');
+  const list=document.getElementById('histList');
+  list.innerHTML='';
+  if(state.draws.length===0){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  state.draws.forEach(d=>{
+    const item=document.createElement('div');
+    item.className='hist-item';
+    item.innerHTML=`<span class="hist-luck">${d.fortune.level}</span><span class="hist-preview">${d.fortune.cn.split('\n')[0]}</span><span class="hist-time">${d.time}</span>`;
+    item.onclick=()=>{ renderCard(d.fortune,d.photo,true,d.fortune.level==='大吉'); window.scrollTo({top:0,behavior:'smooth'}); };
+    list.appendChild(item);
+  });
+}
+
+function spawnConfetti(){
+  const colors=['#FFB39A','#FF7A5A','#FFD700','#FFB6C1','#98FB98','#87CEEB','#DDA0DD'];
+  for(let i=0;i<60;i++){
+    setTimeout(()=>{
+      const p=document.createElement('div');
+      p.className='confetti-piece';
+      p.style.cssText=`left:${Math.random()*100}vw;top:${-10+Math.random()*20}px;background:${colors[Math.floor(Math.random()*colors.length)]};width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${1.2+Math.random()*1}s;animation-delay:${Math.random()*0.3}s;`;
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(),2600);
+    },i*20);
+  }
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function resetDay(){
+  state={date:getTodayStr(), draws:[], usedByLevel:{}, usedPi:[]};
+  saveState();
+  document.getElementById('resultsArea').innerHTML='';
+  document.getElementById('histWrap').style.display='none';
+  const scene=document.getElementById('catScene');
+  if(scene) scene.classList.remove('disabled');
+  const hint=document.getElementById('catHint');
+  if(hint) hint.textContent='点 哈 尼 求 签 🐾';
+  if(hani()) hani().className='hani idle';
+  drawing=false;
+  renderChances();
+  showToast('已重置，重新求签吧～ 🌸');
+  setTimeout(()=>showCatBubble('又来啦！'),400);
+}
+
+function spawnPetals(){
+  const c=document.getElementById('petals');
+  const s=['✿','❀','✾','❁','🌸'];
+  for(let i=0;i<18;i++){
+    const p=document.createElement('div');
+    p.className='petal'; p.textContent=s[Math.floor(Math.random()*s.length)];
+    p.style.cssText=`left:${Math.random()*100}vw;animation-duration:${12+Math.random()*18}s;animation-delay:${Math.random()*20}s;font-size:${0.7+Math.random()*0.8}rem;`;
+    c.appendChild(p);
+  }
+}
+
+// PWA service worker
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=> navigator.serviceWorker.register('./sw.js'));
+}
+</script>
+</body>
+</html>
